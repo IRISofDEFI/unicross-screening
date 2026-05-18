@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, ImageOff } from 'lucide-react';
+import api from '../../api/axios';
 
 const ACTION_BTNS = [
   { status: 'not_screened', label: 'Unscreen', cls: 'bg-orange-500 hover:bg-orange-600' },
@@ -9,11 +10,20 @@ const ACTION_BTNS = [
   { status: 'not_qualified', label: 'Not Qualified', cls: 'bg-red-500 hover:bg-red-600' },
 ];
 
+const STATUS_TO_API = {
+  qualified: 'Qualified',
+  not_qualified: 'Not Qualified',
+  deficient: 'Deficient',
+  not_screened: 'Pending',
+};
+
 export default function CredentialViewer({ candidate, screeningStatus, onStatusChange }) {
   const navigate = useNavigate();
   const [credIndex, setCredIndex] = useState(0);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState('');
 
-  const credentials = candidate.credentials;
+  const credentials = candidate.credentials ?? [];
   const current = credentials[credIndex];
   const total = credentials.length;
 
@@ -24,6 +34,21 @@ export default function CredentialViewer({ candidate, screeningStatus, onStatusC
     screeningStatus === 'not_screened'
       ? ACTION_BTNS
       : ACTION_BTNS.filter((b) => b.status === 'not_screened');
+
+  const handleAction = async (status) => {
+    setSaving(true);
+    setSaveError('');
+    try {
+      await api.patch(`/candidates/${candidate.id}/screen/`, {
+        status: STATUS_TO_API[status],
+      });
+      onStatusChange(status);
+    } catch {
+      setSaveError('Failed to update status. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-slate-200 flex flex-col">
@@ -37,58 +62,73 @@ export default function CredentialViewer({ candidate, screeningStatus, onStatusC
             {visibleActions.map((btn) => (
               <button
                 key={btn.status}
-                onClick={() => onStatusChange(btn.status)}
-                className={`px-2.5 py-1 rounded text-xs font-semibold text-white transition-colors whitespace-nowrap ${btn.cls}`}
+                onClick={() => handleAction(btn.status)}
+                disabled={saving}
+                className={`px-2.5 py-1 rounded text-xs font-semibold text-white transition-colors whitespace-nowrap ${btn.cls} disabled:opacity-60 disabled:cursor-not-allowed`}
               >
-                {btn.label}
+                {saving ? '…' : btn.label}
               </button>
             ))}
           </div>
         </div>
+        {saveError && (
+          <p className="mt-2 text-xs text-red-500">{saveError}</p>
+        )}
       </div>
 
       {/* Image display */}
       <div className="p-4">
-        <div className="w-full h-72 bg-slate-100 border border-slate-200 rounded-md flex items-center justify-center overflow-hidden">
-          {current.image ? (
-            <img
-              src={current.image}
-              alt={current.label}
-              className="w-full h-full object-contain"
-            />
-          ) : (
+        {total === 0 ? (
+          <div className="w-full h-72 bg-slate-100 border border-slate-200 rounded-md flex items-center justify-center">
             <div className="flex flex-col items-center gap-2 text-slate-400">
               <ImageOff className="w-10 h-10" />
-              <span className="text-xs">No image available</span>
+              <span className="text-xs">No credentials uploaded</span>
             </div>
-          )}
-        </div>
+          </div>
+        ) : (
+          <>
+            <div className="w-full h-72 bg-slate-100 border border-slate-200 rounded-md flex items-center justify-center overflow-hidden">
+              {current.image ? (
+                <img
+                  src={current.image}
+                  alt={current.label}
+                  className="w-full h-full object-contain"
+                />
+              ) : (
+                <div className="flex flex-col items-center gap-2 text-slate-400">
+                  <ImageOff className="w-10 h-10" />
+                  <span className="text-xs">No image available</span>
+                </div>
+              )}
+            </div>
 
-        {/* Label bar */}
-        <div className="mt-2 bg-slate-700 text-white text-xs font-semibold text-center py-1.5 rounded-md uppercase tracking-wide">
-          {current.label}
-        </div>
+            {/* Label bar */}
+            <div className="mt-2 bg-slate-700 text-white text-xs font-semibold text-center py-1.5 rounded-md uppercase tracking-wide">
+              {current.label}
+            </div>
 
-        {/* Navigation arrows */}
-        <div className="flex items-center justify-center gap-4 mt-3">
-          <button
-            onClick={prev}
-            className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center transition-colors"
-            aria-label="Previous credential"
-          >
-            <ChevronLeft className="w-4 h-4 text-slate-600" />
-          </button>
-          <span className="text-xs text-slate-500 tabular-nums">
-            {credIndex + 1} / {total}
-          </span>
-          <button
-            onClick={next}
-            className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center transition-colors"
-            aria-label="Next credential"
-          >
-            <ChevronRight className="w-4 h-4 text-slate-600" />
-          </button>
-        </div>
+            {/* Navigation arrows */}
+            <div className="flex items-center justify-center gap-4 mt-3">
+              <button
+                onClick={prev}
+                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center transition-colors"
+                aria-label="Previous credential"
+              >
+                <ChevronLeft className="w-4 h-4 text-slate-600" />
+              </button>
+              <span className="text-xs text-slate-500 tabular-nums">
+                {credIndex + 1} / {total}
+              </span>
+              <button
+                onClick={next}
+                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center transition-colors"
+                aria-label="Next credential"
+              >
+                <ChevronRight className="w-4 h-4 text-slate-600" />
+              </button>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Back to Prospects */}

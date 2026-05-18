@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Eye, Pencil, RefreshCw, Calendar, Search, Download,
@@ -10,20 +10,7 @@ import {
   regStatusLabel,
 } from '../../utils/statusColors';
 import useAuth from '../../hooks/useAuth';
-
-const MOCK_CANDIDATES = [
-  {
-    id: 42,
-    fullname: 'IKONGYE ENDURANCE UKONGIKWEN',
-    jambRegNo: '202550889735IF',
-    gender: 'F',
-    phone: '09138965898',
-    faculty: 'BIOLOGICAL SCIENCES',
-    department: 'MICROBIOLOGY',
-    regStatus: 'completed',
-    screeningStatus: 'qualified',
-  },
-];
+import api from '../../api/axios';
 
 const EMPTY_FILTERS = {
   faculty: '',
@@ -79,39 +66,64 @@ export default function CandidatesPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
 
+  const [candidates, setCandidates] = useState([]);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [fetchCount, setFetchCount] = useState(0);
+
   const setFilter = (key, value) =>
     setFilters((prev) => ({ ...prev, [key]: value }));
 
   const handleFetch = () => {
     setAppliedFilters({ ...filters });
     setCurrentPage(1);
+    setFetchCount((c) => c + 1);
   };
 
-  const filtered = MOCK_CANDIDATES.filter((c) => {
-    if (appliedFilters.faculty && c.faculty !== appliedFilters.faculty) return false;
-    if (appliedFilters.department && c.department !== appliedFilters.department) return false;
-    if (appliedFilters.screeningStatus && c.screeningStatus !== appliedFilters.screeningStatus) return false;
-    if (
-      appliedFilters.regNumber &&
-      !c.jambRegNo.toLowerCase().includes(appliedFilters.regNumber.toLowerCase())
-    )
-      return false;
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase();
-      return (
-        c.fullname.toLowerCase().includes(q) ||
-        c.jambRegNo.toLowerCase().includes(q) ||
-        c.department.toLowerCase().includes(q) ||
-        c.faculty.toLowerCase().includes(q)
-      );
-    }
-    return true;
-  });
+  useEffect(() => {
+    if (fetchCount === 0) return;
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
-  const paginated = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
-  const from = filtered.length === 0 ? 0 : (currentPage - 1) * pageSize + 1;
-  const to = Math.min(currentPage * pageSize, filtered.length);
+    const params = { page: currentPage, per_page: pageSize };
+    if (appliedFilters.faculty) params.faculty_id = appliedFilters.faculty;
+    if (appliedFilters.department) params.department_id = appliedFilters.department;
+    if (appliedFilters.screeningStatus) params.screening_status = appliedFilters.screeningStatus;
+    if (appliedFilters.entryMode) params.entry_mode = appliedFilters.entryMode;
+    if (appliedFilters.regNumber) params.jamb_reg_no = appliedFilters.regNumber;
+
+    setLoading(true);
+    setError('');
+    api.get('/candidates/', { params })
+      .then(({ data }) => {
+        const payload = data.data ?? data;
+        const list = Array.isArray(payload) ? payload : (payload.results ?? []);
+        const count = !Array.isArray(payload) ? (payload.count ?? list.length) : list.length;
+        setCandidates(list);
+        setTotal(count);
+      })
+      .catch(() => {
+        setError('Failed to load candidates. Please try again.');
+        setCandidates([]);
+        setTotal(0);
+      })
+      .finally(() => setLoading(false));
+  }, [appliedFilters, currentPage, pageSize, fetchCount]);
+
+  const filtered = searchQuery
+    ? candidates.filter((c) => {
+        const q = searchQuery.toLowerCase();
+        return (
+          c.fullname?.toLowerCase().includes(q) ||
+          c.jambRegNo?.toLowerCase().includes(q) ||
+          c.department?.toLowerCase().includes(q) ||
+          c.faculty?.toLowerCase().includes(q)
+        );
+      })
+    : candidates;
+
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const from = total === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+  const to = Math.min(currentPage * pageSize, total);
 
   return (
     <div className="space-y-4">
@@ -233,9 +245,10 @@ export default function CandidatesPage() {
 
         <button
           onClick={handleFetch}
-          className="w-full mt-4 bg-[#1a2332] hover:bg-[#243447] text-white font-semibold text-sm py-2.5 rounded-md transition-colors"
+          disabled={loading}
+          className="w-full mt-4 bg-[#1a2332] hover:bg-[#243447] disabled:opacity-60 disabled:cursor-not-allowed text-white font-semibold text-sm py-2.5 rounded-md transition-colors"
         >
-          Fetch
+          {loading ? 'Fetching…' : 'Fetch'}
         </button>
       </div>
 
@@ -263,7 +276,7 @@ export default function CandidatesPage() {
                 type="text"
                 placeholder="Search…"
                 value={searchQuery}
-                onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
+                onChange={(e) => { setSearchQuery(e.target.value); }}
                 className="border border-slate-300 rounded-md pl-8 pr-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-[#1e73be] w-48"
               />
             </div>
@@ -293,14 +306,31 @@ export default function CandidatesPage() {
               </tr>
             </thead>
             <tbody>
-              {paginated.length === 0 ? (
+              {loading ? (
+                <tr>
+                  <td colSpan={10} className="px-3 py-12 text-center">
+                    <div className="flex items-center justify-center gap-2 text-slate-500 text-sm">
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      Loading candidates…
+                    </div>
+                  </td>
+                </tr>
+              ) : error ? (
+                <tr>
+                  <td colSpan={10} className="px-3 py-12 text-center text-red-500 text-sm">
+                    {error}
+                  </td>
+                </tr>
+              ) : filtered.length === 0 ? (
                 <tr>
                   <td colSpan={10} className="px-3 py-12 text-center text-slate-400 text-sm">
-                    No records found. Adjust filters and click Fetch.
+                    {fetchCount === 0
+                      ? 'Adjust filters and click Fetch.'
+                      : 'No records found.'}
                   </td>
                 </tr>
               ) : (
-                paginated.map((c, idx) => (
+                filtered.map((c, idx) => (
                   <tr
                     key={c.id}
                     className="border-b border-slate-100 hover:bg-slate-50 transition-colors"
@@ -359,14 +389,14 @@ export default function CandidatesPage() {
         {/* Pagination */}
         <div className="flex items-center justify-between px-4 py-3 border-t border-slate-200 text-sm text-slate-600">
           <span>
-            {filtered.length === 0
+            {total === 0
               ? 'No entries to show'
-              : `Showing ${from} to ${to} of ${filtered.length} ${filtered.length === 1 ? 'entry' : 'entries'}`}
+              : `Showing ${from} to ${to} of ${total} ${total === 1 ? 'entry' : 'entries'}`}
           </span>
           <div className="flex items-center gap-1">
             <button
               onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-              disabled={currentPage === 1}
+              disabled={currentPage === 1 || loading}
               className="px-3 py-1.5 border border-slate-300 rounded-md text-sm disabled:opacity-40 hover:bg-slate-50 disabled:cursor-not-allowed transition-colors"
             >
               Previous
@@ -376,7 +406,7 @@ export default function CandidatesPage() {
             </span>
             <button
               onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-              disabled={currentPage >= totalPages}
+              disabled={currentPage >= totalPages || loading}
               className="px-3 py-1.5 border border-slate-300 rounded-md text-sm disabled:opacity-40 hover:bg-slate-50 disabled:cursor-not-allowed transition-colors"
             >
               Next
