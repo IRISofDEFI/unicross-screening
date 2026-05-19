@@ -41,8 +41,16 @@ export default function CandidateDetail({ candidate, screeningStatus, onStatusCh
           {activeTab === 'personal' && (
             <PersonalDetailsTab candidate={candidate} screeningStatus={screeningStatus} />
           )}
-          {activeTab === 'ssce' && <SSCETab ssce={candidate.ssce} />}
-          {activeTab === 'utme' && <UTMETab utme={candidate.utme} />}
+          {activeTab === 'ssce' && (
+            candidate.ssce
+              ? <SSCETab ssce={candidate.ssce} />
+              : <p className="py-12 text-center text-slate-400 text-sm">No SSCE data available.</p>
+          )}
+          {activeTab === 'utme' && (
+            candidate.utme
+              ? <UTMETab utme={candidate.utme} />
+              : <p className="py-12 text-center text-slate-400 text-sm">No UTME data available.</p>
+          )}
           {activeTab === 'prev_cert' && <PrevCertTab />}
         </div>
       </div>

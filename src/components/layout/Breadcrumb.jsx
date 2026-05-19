@@ -7,6 +7,11 @@ const LABELS = {
   candidates: 'Candidates',
 };
 
+function segmentLabel(seg) {
+  if (!isNaN(Number(seg))) return 'Candidate Detail';
+  return LABELS[seg] ?? seg.charAt(0).toUpperCase() + seg.slice(1);
+}
+
 export default function Breadcrumb() {
   const { pathname } = useLocation();
   const segments = pathname.split('/').filter(Boolean);
@@ -19,7 +24,7 @@ export default function Breadcrumb() {
       {segments.map((seg, i) => {
         const path = '/' + segments.slice(0, i + 1).join('/');
         const isLast = i === segments.length - 1;
-        const label = LABELS[seg] ?? seg.charAt(0).toUpperCase() + seg.slice(1);
+        const label = segmentLabel(seg);
         return (
           <span key={path} className="flex items-center gap-1">
             <ChevronRight className="w-3 h-3 text-slate-400" />

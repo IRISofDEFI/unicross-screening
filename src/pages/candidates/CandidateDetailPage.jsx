@@ -3,13 +3,7 @@ import { useParams } from 'react-router-dom';
 import { RefreshCw } from 'lucide-react';
 import CandidateDetail from '../../components/candidates/CandidateDetail';
 import api from '../../api/axios';
-
-const API_TO_STATUS = {
-  Qualified: 'qualified',
-  'Not Qualified': 'not_qualified',
-  Deficient: 'deficient',
-  Pending: 'not_screened',
-};
+import { normalizeCandidateDetail, API_TO_STATUS } from '../../utils/normalizeCandidate';
 
 export default function CandidateDetailPage() {
   const { id } = useParams();
@@ -21,7 +15,7 @@ export default function CandidateDetailPage() {
     setLoading(true);
     api.get(`/candidates/${id}/`)
       .then(({ data }) => {
-        const c = data.data ?? data;
+        const c = normalizeCandidateDetail(data.data ?? data);
         setCandidate(c);
         setScreeningStatus(API_TO_STATUS[c.screening_status] ?? 'not_screened');
       })

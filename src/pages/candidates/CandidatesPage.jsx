@@ -11,6 +11,7 @@ import {
 } from '../../utils/statusColors';
 import useAuth from '../../hooks/useAuth';
 import api from '../../api/axios';
+import { normalizeCandidateList } from '../../utils/normalizeCandidate';
 
 const EMPTY_FILTERS = {
   faculty: '',
@@ -27,6 +28,11 @@ const inputCls =
   'w-full border border-slate-300 rounded-md px-3 py-2 text-sm text-slate-700 bg-white focus:outline-none focus:ring-1 focus:ring-[#1e73be] focus:border-[#1e73be]';
 const disabledCls =
   'bg-slate-100 text-slate-500 cursor-not-allowed opacity-80';
+
+function extractList(envelopeData) {
+  const payload = envelopeData.data ?? envelopeData;
+  return Array.isArray(payload) ? payload : (payload.results ?? []);
+}
 
 function FilterField({ label, children }) {
   return (
@@ -56,8 +62,8 @@ export default function CandidatesPage() {
 
   const roleFilters = {
     ...EMPTY_FILTERS,
-    faculty: facultyLocked ? (user?.faculty_name ?? '') : '',
-    department: deptLocked ? (user?.department_name ?? '') : '',
+    faculty: facultyLocked ? (user?.faculty_id ?? '') : '',
+    department: deptLocked ? (user?.department_id ?? '') : '',
   };
 
   const [filters, setFilters] = useState(roleFilters);
@@ -72,8 +78,38 @@ export default function CandidatesPage() {
   const [error, setError] = useState('');
   const [fetchCount, setFetchCount] = useState(0);
 
+  // Dropdown data
+  const [faculties, setFaculties] = useState([]);
+  const [departments, setDepartments] = useState([]);
+  const [batches, setBatches] = useState([]);
+
+  // Fetch faculties and batches once on mount
+  useEffect(() => {
+    api.get('/faculties/')
+      .then(({ data }) => setFaculties(extractList(data)))
+      .catch(() => {});
+    api.get('/batches/')
+      .then(({ data }) => setBatches(extractList(data)))
+      .catch(() => {});
+  }, []);
+
+  // Fetch departments whenever the selected faculty changes
+  useEffect(() => {
+    if (!filters.faculty) {
+      setDepartments([]);
+      return;
+    }
+    api.get('/departments/', { params: { faculty_id: filters.faculty } })
+      .then(({ data }) => setDepartments(extractList(data)))
+      .catch(() => setDepartments([]));
+  }, [filters.faculty]);
+
   const setFilter = (key, value) =>
     setFilters((prev) => ({ ...prev, [key]: value }));
+
+  const handleFacultyChange = (value) => {
+    setFilters((prev) => ({ ...prev, faculty: value, department: '' }));
+  };
 
   const handleFetch = () => {
     setAppliedFilters({ ...filters });
@@ -89,6 +125,7 @@ export default function CandidatesPage() {
     if (appliedFilters.department) params.department_id = appliedFilters.department;
     if (appliedFilters.screeningStatus) params.screening_status = appliedFilters.screeningStatus;
     if (appliedFilters.entryMode) params.entry_mode = appliedFilters.entryMode;
+    if (appliedFilters.batch) params.batch = appliedFilters.batch;
     if (appliedFilters.regNumber) params.jamb_reg_no = appliedFilters.regNumber;
 
     setLoading(true);
@@ -96,9 +133,9 @@ export default function CandidatesPage() {
     api.get('/candidates/', { params })
       .then(({ data }) => {
         const payload = data.data ?? data;
-        const list = Array.isArray(payload) ? payload : (payload.results ?? []);
-        const count = !Array.isArray(payload) ? (payload.count ?? list.length) : list.length;
-        setCandidates(list);
+        const raw = Array.isArray(payload) ? payload : (payload.results ?? []);
+        const count = !Array.isArray(payload) ? (payload.count ?? raw.length) : raw.length;
+        setCandidates(raw.map(normalizeCandidateList));
         setTotal(count);
       })
       .catch(() => {
@@ -140,15 +177,16 @@ export default function CandidatesPage() {
           <FilterField label="Faculty">
             <select
               value={filters.faculty}
-              onChange={(e) => setFilter('faculty', e.target.value)}
+              onChange={(e) => handleFacultyChange(e.target.value)}
               disabled={facultyLocked}
               className={`${inputCls} ${facultyLocked ? disabledCls : ''}`}
             >
               <option value="">All</option>
-              <option value="BIOLOGICAL SCIENCES">Biological Sciences</option>
-              <option value="PHYSICAL SCIENCES">Physical Sciences</option>
-              <option value="SOCIAL SCIENCES">Social Sciences</option>
-              <option value="ARTS">Arts</option>
+              {faculties.map((f) => (
+                <option key={f.id} value={f.id}>
+                  {f.name}
+                </option>
+              ))}
             </select>
           </FilterField>
 
@@ -156,14 +194,15 @@ export default function CandidatesPage() {
             <select
               value={filters.department}
               onChange={(e) => setFilter('department', e.target.value)}
-              disabled={deptLocked}
-              className={`${inputCls} ${deptLocked ? disabledCls : ''}`}
+              disabled={deptLocked || !filters.faculty}
+              className={`${inputCls} ${(deptLocked || !filters.faculty) ? disabledCls : ''}`}
             >
               <option value="">All</option>
-              <option value="MICROBIOLOGY">Microbiology</option>
-              <option value="BIOCHEMISTRY">Biochemistry</option>
-              <option value="ZOOLOGY">Zoology</option>
-              <option value="BOTANY">Botany</option>
+              {departments.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.name}
+                </option>
+              ))}
             </select>
           </FilterField>
 
@@ -187,10 +226,10 @@ export default function CandidatesPage() {
               className={inputCls}
             >
               <option value="">All</option>
-              <option value="qualified">Qualified</option>
-              <option value="deficient">Deficient</option>
-              <option value="not_qualified">Not Qualified</option>
-              <option value="not_screened">Not Screened</option>
+              <option value="Qualified">Qualified</option>
+              <option value="Deficient">Deficient</option>
+              <option value="Not Qualified">Not Qualified</option>
+              <option value="Pending">Not Screened</option>
             </select>
           </FilterField>
 
@@ -202,8 +241,8 @@ export default function CandidatesPage() {
               className={inputCls}
             >
               <option value="">All</option>
-              <option value="utme">UTME</option>
-              <option value="direct_entry">Direct Entry</option>
+              <option value="UTME">UTME</option>
+              <option value="DE">Direct Entry</option>
             </select>
           </FilterField>
 
@@ -226,9 +265,11 @@ export default function CandidatesPage() {
               className={inputCls}
             >
               <option value="">All</option>
-              <option value="1">Batch 1</option>
-              <option value="2">Batch 2</option>
-              <option value="3">Batch 3</option>
+              {batches.map((b) => (
+                <option key={b.id ?? b} value={b.id ?? b}>
+                  {b.name ?? b}
+                </option>
+              ))}
             </select>
           </FilterField>
 
@@ -276,7 +317,7 @@ export default function CandidatesPage() {
                 type="text"
                 placeholder="Search…"
                 value={searchQuery}
-                onChange={(e) => { setSearchQuery(e.target.value); }}
+                onChange={(e) => setSearchQuery(e.target.value)}
                 className="border border-slate-300 rounded-md pl-8 pr-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-[#1e73be] w-48"
               />
             </div>
