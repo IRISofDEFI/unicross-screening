@@ -9,6 +9,16 @@ import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
 import CandidatesPage from './pages/candidates/CandidatesPage';
 import CandidateDetailPage from './pages/candidates/CandidateDetailPage';
+import StudentsPage from './pages/StudentsPage';
+import AdmissionListPage from './pages/AdmissionListPage';
+import MatriculationPage from './pages/MatriculationPage';
+import PaymentReportsPage from './pages/PaymentReportsPage';
+import PostUtmePage from './pages/PostUtmePage';
+import SetupPage from './pages/SetupPage';
+import ViewPaymentStatusPage from './pages/ViewPaymentStatusPage';
+import GSSRegistrationPage from './pages/GSSRegistrationPage';
+import DepartmentAdminPage from './pages/DepartmentAdminPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
 
 const router = createBrowserRouter([
   {
@@ -27,6 +37,16 @@ const router = createBrowserRouter([
       { path: 'dashboard', element: <DashboardPage /> },
       { path: 'screening/candidates', element: <CandidatesPage /> },
       { path: 'screening/candidates/:id', element: <CandidateDetailPage /> },
+      { path: 'students', element: <StudentsPage /> },
+      { path: 'admission-list', element: <AdmissionListPage /> },
+      { path: 'matriculation', element: <MatriculationPage /> },
+      { path: 'payment-reports', element: <PaymentReportsPage /> },
+      { path: 'post-utme', element: <PostUtmePage /> },
+      { path: 'setup', element: <SetupPage /> },
+      { path: 'payment-status', element: <ViewPaymentStatusPage /> },
+      { path: 'gss-registration', element: <GSSRegistrationPage /> },
+      { path: 'department-admin', element: <DepartmentAdminPage /> },
+      { path: 'reset-password', element: <ResetPasswordPage /> },
     ],
   },
 ]);

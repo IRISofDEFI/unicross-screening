@@ -34,13 +34,17 @@ const navConfig = [
     id: 'students',
     label: 'Students Mgt',
     icon: GraduationCap,
-    children: [],
+    children: [
+      { label: 'Students', path: '/students' },
+    ],
   },
   {
     id: 'admission1',
     label: 'Admission List Mgt',
     icon: ClipboardList,
-    children: [],
+    children: [
+      { label: 'Admission List', path: '/admission-list' },
+    ],
   },
   {
     id: 'prospective',
@@ -48,7 +52,7 @@ const navConfig = [
     icon: UserPlus,
     children: [
       { label: 'Candidates', path: '/screening/candidates' },
-      { label: 'Matriculation', path: '#' },
+      { label: 'Matriculation', path: '/matriculation' },
     ],
   },
   {
@@ -61,49 +65,57 @@ const navConfig = [
     id: 'payment-reports',
     label: 'Payment Reports',
     icon: Receipt,
-    children: [],
+    children: [
+      { label: 'Reports', path: '/payment-reports' },
+    ],
   },
   {
     id: 'post-utme',
     label: 'Post Utme',
     icon: FileText,
-    children: [],
+    children: [
+      { label: 'Post UTME', path: '/post-utme' },
+    ],
   },
   {
     id: 'admission2',
     label: 'Admission List Mgt',
     icon: ClipboardList,
-    children: [],
+    children: [
+      { label: 'Admission List', path: '/admission-list' },
+    ],
   },
   {
     id: 'setup',
     label: 'Setup',
     icon: Settings,
-    children: [],
+    children: [
+      { label: 'System Setup', path: '/setup' },
+    ],
   },
   {
     id: 'payment-status',
     label: 'View Payment Status',
-    path: '#',
+    path: '/payment-status',
     icon: Eye,
   },
   {
     id: 'gss',
     label: 'GSS Registration Mgt',
-    path: '#',
+    path: '/gss-registration',
     icon: BookOpen,
   },
   {
     id: 'dept-admin',
     label: 'Department Admin',
-    path: '#',
+    path: '/department-admin',
     icon: Building2,
     roles: ['admin', 'department_officer'],
   },
   {
     id: 'reset-password',
     label: 'Reset Password',
-    path: '#',
+    path: '/reset-password',
     icon: KeyRound,
   },
 ];
