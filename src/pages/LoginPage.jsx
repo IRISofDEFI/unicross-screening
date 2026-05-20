@@ -17,6 +17,21 @@ export default function LoginPage() {
     e.preventDefault();
     setError('');
     setLoading(true);
+
+    if (username === 'demo' && password === 'demo123') {
+      const mockOfficer = {
+        id: 1,
+        name: 'Demo Officer',
+        role: 'admission_officer',
+        faculty_id: null,
+        department_id: null,
+      };
+      login(mockOfficer, 'demo-token-bypass');
+      navigate('/dashboard', { replace: true });
+      setLoading(false);
+      return;
+    }
+
     try {
       const { data } = await api.post('/auth/login/', { username, password });
       login(data.data.officer, data.data.token);
@@ -117,6 +132,10 @@ export default function LoginPage() {
           </button>
         </form>
       </div>
+
+      <p className="mt-4 text-xs text-slate-400">
+        Demo access: username = <span className="font-medium">demo</span> / password = <span className="font-medium">demo123</span>
+      </p>
     </div>
   );
 }

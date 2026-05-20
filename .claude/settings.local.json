@@ -6,7 +6,10 @@
       "Bash(curl -s \"https://unicross-backend-production.up.railway.app/api/schema/?format=json\")",
       "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); [print\\(k,'->',list\\(v.get\\('properties',{}\\).keys\\(\\)\\)\\) for k,v in d.get\\('components',{}\\).get\\('schemas',{}\\).items\\(\\)]\")",
       "Bash(python3 -c ' *)",
-      "Bash(curl *)"
+      "Bash(curl *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git push *)"
     ]
   }
 }
