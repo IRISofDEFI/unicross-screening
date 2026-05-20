@@ -18,7 +18,8 @@ export default function LoginPage() {
     setError('');
     setLoading(true);
 
-    if (username === 'demo' && password === 'demo123') {
+    // Demo bypass — check BEFORE any API call
+    if (username.trim() === 'demo' && password === 'demo123') {
       const mockOfficer = {
         id: 1,
         name: 'Demo Officer',
@@ -26,22 +27,21 @@ export default function LoginPage() {
         faculty_id: null,
         department_id: null,
       };
+      localStorage.setItem('staff_token', 'demo-token-bypass');
       login(mockOfficer, 'demo-token-bypass');
       navigate('/dashboard', { replace: true });
       setLoading(false);
-      return;
+      return; // stop here, never call API
     }
 
+    // Real login for everyone else
     try {
-      const { data } = await api.post('/auth/login/', { username, password });
-      login(data.data.officer, data.data.token);
+      const response = await api.post('/auth/login/', { username, password });
+      const { token, officer } = response.data.data;
+      login(officer, token);
       navigate('/dashboard', { replace: true });
     } catch (err) {
-      const message =
-        err.response?.data?.message ||
-        err.response?.data?.detail ||
-        'Invalid credentials. Please try again.';
-      setError(message);
+      setError('Invalid credentials. Please try again.');
     } finally {
       setLoading(false);
     }
